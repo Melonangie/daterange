@@ -1,0 +1,26 @@
+{
+  "name": "melonangie/dates",
+  "description": "Simple Date Ranges Management RESTful API",
+  "keywords": ["rest", "api", "php"],
+  "license": "MIT",
+  "authors": [{
+    "name": "Maria Rabelero",
+    "email": "maria.rabelero@gmail.com"
+  }],
+  "archive": {
+    "exclude": ["vendor", ".DS_Store", "*.log"]
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^7"
+  },
+  "autoload": {
+    "psr-4": {
+      "Dates\\": "api/"
+    }
+  },
+  "require": {
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-pdo": "*"
+  }
+}

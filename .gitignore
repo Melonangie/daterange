@@ -1,20 +1,70 @@
-vendor/
-node_modules/
-npm-debug.log
+# OS
+.DS_Store
+Thumbs.db
+._*
 
-# Laravel 4 specific
-bootstrap/compiled.php
-app/storage/
+# IDE
+.idea
+*.sublime-workspace
 
-# Laravel 5 & Lumen specific
-public/storage
-public/hot
-storage/*.key
-.env.*.php
-.env.php
-.env
-Homestead.yaml
-Homestead.json
+# Protected files
+db_mysql_password
+db_mysql_root_password
+**/db_mysql_data
+**/db_data
 
-# Rocketeer PHP task runner and deployment package. https://github.com/rocketeers/rocketeer
-.rocketeer/
+### Node ###
+
+# Logs
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Optional npm cache directory
+.npm
+.config
+.node*
+
+# Dependency directories
+**/node_modules
+**/jspm_packages
+**/bower_components
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Optional eslint cache
+.eslintcache
+
+# Build generated
+**/dist/
+**/build/
+**/doc/
+**/node/
+**/target/
+
+# Map-Files
+*.js.map
+
+### Sass-Files ###
+*.sassc
+.sass-cache
+*.css.map
+
+# Project
+**/config/local*
+debug.log
+**/dist
+**/project/tmp
+**/public/assets
+**/public/proto
+**/public/reports
+**/src/patterns/**/template/*.js
+**/src/patterns/**/template/partial/*.js
+**/tests/cypress/cypress/screenshots
+**/tests/cypress/cypress/videos
+
+# allow
+!.gitkeep
