@@ -18,11 +18,11 @@ require_once __DIR__ . '../../Config/DBConfigurations.inc.php';
 class DBConnection {
 
   /**
-   * Databases name.
+   * PDO object.
    *
-   * @var string
+   * @var PDO
    */
-  private $driver;
+  private $pdo;
 
   /**
    * Databases schema.
@@ -32,11 +32,11 @@ class DBConnection {
   private $schema;
 
   /**
-   * PDO object.
+   * Databases name.
    *
-   * @var PDO
+   * @var string
    */
-  private $pdo;
+  private $driver;
 
   /**
    * PDO constructor.
@@ -57,7 +57,7 @@ class DBConnection {
     $this->createPDO($db_configs);
 
     // Gets the database schema from the configuration variable.
-    $this->schema = $db_configs[$this->driver][SCHEMA];
+    $this->setTableSchema($db_configs);
 
     unset($db_configs);
 
@@ -119,12 +119,32 @@ class DBConnection {
   }
 
   /**
-   * Gets the DB driver.
+   * Gets the database schema.
    *
-   * @return string
+   * @param array $db_configs
    */
-  public function getDriver(): string {
-    return $this->driver;
+  private function setTableSchema(array $db_configs): void {
+    $this->schema = $db_configs[$this->driver][SCHEMA];
+  }
+
+  /**
+   * Gets the Database PDO.
+   *
+   * @return \PDO
+   */
+  public function pdo(): PDO {
+    return $this->pdo;
+  }
+
+  /**
+   * Gets the DB schema.
+   *
+   * @param string $element
+   *
+   * @return array
+   */
+  public function get(string $element): array {
+    return $this->schema[$element];
   }
 
   /**
@@ -137,12 +157,12 @@ class DBConnection {
   }
 
   /**
-   * Gets the Database PDO.
+   * Gets the DB driver.
    *
-   * @return \PDO
+   * @return string
    */
-  public function getPdo(): PDO {
-    return $this->pdo;
+  public function getDriver(): string {
+    return $this->driver;
   }
 
   /**

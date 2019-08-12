@@ -25,7 +25,10 @@ $db_configs = [
     ),
     SCHEMA => [
       TABLE => DATES_TABLE,
-      VIEW => DATES_VIEW
+      VIEW => DATES_VIEW,
+      DATE_STARTS => PDO::PARAM_STR,
+      DATE_ENDS => PDO::PARAM_STR,
+      PRICE => PDO::PARAM_STR
     ]
   ],
   // Additional driver array go here ...

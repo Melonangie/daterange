@@ -46,10 +46,11 @@ define('PARAMETER', 'param');
 define('ID', 'id');
 define('MODIFIED', 'modified');
 define('DATE_STARTS', 'date_start');
-define('DATE_END', 'date_end');
+define('DATE_ENDS', 'date_end');
 define('PRICE', 'price');
 define('V1', 'v1');
-define('RESOURCE_NAMESPACE', 'Daterange\v1\Resource');
+define('RESOURCE_NAMESPACE', 'Daterange\v1\Resource\\');
+define('DATERANGE_CLASS', 'Daterange\v1\Model\Daterange\\');
 
 // Define REST messages constants.
 define('MSG_FATAL_EXCEPTION', 'Application service not available');

@@ -2,8 +2,10 @@
 
 namespace Daterange\v1\Resource;
 
+use Daterange\v1\Database\DBConnection as DBConnection;
 use Daterange\v1\Exception\RestException as RestException;
 use Daterange\v1\Model\Daterange as Daterange;
+use Daterange\v1\Request\Request as Request;
 use Daterange\v1\Service\DaterangeService as DaterangeService;
 use Exception;
 use PDO;
@@ -18,48 +20,79 @@ Class DaterangeResource {
   /**
    * The request.
    *
-   * @var
+   * @var Request
    */
   protected $request;
 
   /**
-   * The class that Daterange Gateway.
+   * Database.
+   *
+   * @var string
+   */
+  protected $db;
+
+  /**
+   * Daterange Gateway.
    *
    * @var DaterangeService
    */
   protected $service;
 
+
+  protected $daterange;
+
   /**
    * PersonResource constructor.
    *
-   * @param        $request
-   * @param string $driver
+   * @param Request $request
    */
-  public function __construct($request, $driver) {
+  public function __construct(Request $request) {
 
     @set_exception_handler([$this, 'exception_handler']);
 
     // Sets the request.
     $this->request = $request;
 
+    // Sets the database driver.
+    $this->db = $this->setDriver();
+
     // Sets the service.
-    $this->service = new DaterangeService($driver);
+    $this->service = new DaterangeService($this->db);
 
   }
 
   /**
    * Gets the request.
    *
-   * @return mixed
+   * @return Request
    */
-  public function getRequest() {
+  public function getRequest(): Request {
     return $this->request;
+  }
+
+  /**
+   * Select the Database driver.
+   *
+   * @return DBConnection
+   */
+  private function setDriver(): DBConnection {
+    // Here you put the logic to selecting the store engine.
+    return new DBConnection(MYSQL);
+  }
+
+  /**
+   * Gets the database driver.
+   *
+   * @return string
+   */
+  public function getDb(): string {
+    return $this->db;
   }
 
   /**
    * Gets the service for the request.
    *
-   * @return \Daterange\v1\Service\DaterangeService
+   * @return DaterangeService
    */
   public function getService(): DaterangeService {
     return $this->service;
@@ -70,7 +103,7 @@ Class DaterangeResource {
    *
    * @param $exception
    */
-  public function exception_handler($exception) {
+  public function exception_handler($exception): void {
     // Set headers.
     header('Content-Type: ' . CONTENT_TYPE_CHARSET_JSON);
     http_response_code($exception->getCode());
@@ -80,52 +113,58 @@ Class DaterangeResource {
   }
 
   /**
-   * Maps the GET request method with the function readPersons from
-   * DaterangeService.
+   * Maps the GET request method to a function in DaterangeService.
    *
-   * @return string
+   * @return array|string
    */
   public function get() {
 
+    // Gets all records.
     if ($this->request->getParameter() === NULL) {
 
-      // Gets all persons.
+      // Gets all records.
       if ($this->request->getExtraParameters() === NULL) {
-        return $this->service->readDateranges();
+        return $this->service->readDaterangeAll();
       }
 
-      // Gets the query builder.
-      else {
-        return $this->service->readDaterangeQuery($this->request->getExtraParameters());
-      }
+      // Gets a query builder for all records.
+      return $this->service->readDaterangeQuery($this->request->getExtraParameters());
 
     }
 
+    // Gets a single record by start date.
     // Verifies record exist.
-    if (!$this->service->verifyExist('id', $this->request->getParameter(), PDO::PARAM_INT, 'PERSONS_TABLE')) {
+    // There are no business rules, this is the place to get them ans use them.
+    if (!$this->service->verifyExist(DATE_STARTS, $this->request->getParameter())) {
       $error = [
-        'msg' => "A record with the request id doesn't exist. id: " . $this->request->getParameter(),
+        'msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(),
         'class' => __CLASS__,
         'func' => __METHOD__,
       ];
       throw new RestException($error, 404);
     }
+    return $this->service->readDaterange($this->request->getParameter());
 
-    // Gets a single person by id.
-    return $this->service->readDaterange((int) $this->request->getParameter());
   }
 
   /**
-   * Maps the POST request method with the function createPerson from
-   * DaterangeService.
+   * Maps the POST request with the function createDaterange from DaterangeService.
    *
-   * @return string
+   * @return array
    */
-  public function post() {
+  public function post(): array {
 
-    // Creates a new Daterange instance.
+    // Gets a new instance.
     try {
-      $person = new Daterange($this->request->getPayload());
+      $daterange = new Daterange($this->request->getPayload());
+      if ($daterange === NULL) {
+        $error = [
+          'msg' => 'There was an error loading the new object.',
+          'class' => __CLASS__,
+          'func' => __METHOD__,
+        ];
+        throw new RestException($error, 400);
+      }
     }
     catch (Exception $exception) {
       $error = [
@@ -138,84 +177,76 @@ Class DaterangeResource {
       throw new RestException($error);
     }
 
-    // Checks the required fields are not null nor empty.
-    $person->verifyRequiredFields();
-
-    return $this->service->createDaterange($person);
+    return $this->service->createDaterange($daterange);
   }
 
   /**
-   * Maps the PUT request method with the function updatePerson from
-   * DaterangeService.
+   * Maps the PUT method with the function updateDaterange from DaterangeService.
    *
-   * @return string
+   * @return array
    */
-  public function put() {
+  public function put(): array {
 
-    // Gets the Daterange id from the payload.
-    $id = $this->request->get_payload_id();
-    if ($id === NULL) {
+    // Gets a new instance.
+    try {
+      $daterange = new Daterange($this->request->getPayload());
+      if ($daterange === NULL) {
+        $error = [
+          'msg' => 'There was an error loading the new object.',
+          'class' => __CLASS__,
+          'func' => __METHOD__,
+        ];
+        throw new RestException($error, 400);
+      }
+    }
+    catch (Exception $exception) {
       $error = [
-        'msg' => "PUT method requires an id in the payload. ",
+        'err_msg' => $exception->getMessage(),
+        'err_code' => $exception->getCode(),
+        'msg' => 'Couldn\'t process payload.',
         'class' => __CLASS__,
         'func' => __METHOD__,
       ];
-      throw new RestException($error, 400);
+      throw new RestException($error);
     }
 
-    // Verifies the person exist.
-    if (!$this->service->verifyExist('id', (int) $id, PDO::PARAM_INT, 'PERSONS_TABLE')) {
+    // Verifies the instance exist.
+    if (!$this->service->verifyExist('date_start', $daterange->getDateStart())) {
       $error = [
-        'msg' => "A record with the request id doesn't exist. id: " . $this->request->getParameter(),
+        'msg' => "A record with the request id doesn't exist. Start date: " . $daterange->getDateStart(),
         'class' => __CLASS__,
         'func' => __METHOD__,
       ];
       throw new RestException($error, 404);
     }
-
-    // Gets the new Daterange data.
-    $daterange = new Daterange($this->request->getPayload());
-
-    if ($daterange === NULL) {
-      $error = [
-        'msg' => "There was an error loading your object. ",
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
-      throw new RestException($error, 400);
-    }
-
-    // Checks the required fields are not null nor empty.
-    $daterange->verifyRequiredFields();
 
     // Gets the old data.
-    $old_person = $this->service->readDaterange($id);
+//    $previous = $this->service->readDaterange($id);
 
     // Updates the old Daterange, in case we're missing a property will not get deleted.
-    $old_person->update($daterange);
+//    $next = $old_person->update($daterange);
 
-    return $this->service->updateDaterange($old_person);
+    return $this->service->updateDaterange($daterange);
   }
 
   /**
-   * Maps the DELETE request method with the function deletePerson from
-   * DaterangeService.
+   * Maps the DELETE method with the function deleteDaterange from DaterangeService.
    *
-   * @return string
+   * @return array
    */
-  public function delete() {
+  public function delete(): array {
 
     // Verifies record exist.
-    if (!$this->service->verifyExist('id', (int) $this->request->getParameter(), PDO::PARAM_INT, 'PERSONS_TABLE')) {
+    if (!$this->service->verifyExist('date_start', $this->request->getParameter())) {
       $error = [
-        'msg' => "A record with the request id doesn't exist. id: " . $this->request->getParameter(),
+        'msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(),
         'class' => __CLASS__,
         'func' => __METHOD__,
       ];
       throw new RestException($error, 404);
     }
 
-    return $this->service->deleteDaterange((int) $this->request->getParameter());
+    return $this->service->deleteDaterange($this->request->getParameter());
   }
 
 }

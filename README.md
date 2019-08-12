@@ -20,7 +20,7 @@ UI
 - Option to truncate tables in the DB.
 
 ## Naming conventions
-Classes & Intefaces | Methods & Properties | Functions | Variables
+Classes & Interfaces | Methods & Properties | Functions | Variables
 ------------ | -------------  | ------------- | -------------
 UpperCamel  | lowerCamel | lowerCamel | lower_case
 
@@ -28,10 +28,10 @@ UpperCamel  | lowerCamel | lowerCamel | lower_case
 URI | Method | Action | Content Type | Description
 ------------ | ------------- | ------------- | ------------ | -------------
 /daterange | GET | index | JSON |  Gets all date ranges records
-/daterange/{id} | GET | show |  JSON |  Gets a single date range record
+/daterange/{date_start} | GET | show |  JSON |  Gets a single date range record
 /daterange | POST | create | JSON |  Inserts a new date range record
 /daterange | PUT | update | JSON |  Updates a particular date range record
-/daterange | DELETE | destroy | JSON |  Deletes a particular date range record
+/daterange/{date_start}  | DELETE | destroy | JSON |  Deletes a particular date range record
 /daterange/all | DELETE | destroyall | JSON |  Truncates the date range DB table
 
 ### Query Builder API
@@ -43,6 +43,7 @@ Function | Variables | Description | Example
 filter | {date_start:date}<br>{date_end:date}<br>{date_start:[date TO date]} | Filters the date ranges result set. For variable values: <ul><li>A wildcard {\*} is use to search for all the variable values.</li><li>The format {[timestamp TO *]} is use for a range query.</li></ul> | ?filter="date_start:2019-08-08"
 offset | {int} | Specifies the starting point to returns from a result set. | ?offset=10
 limit | {int} | Specifies the number of records to return from a result set. | ?limit=10
+fields | {date_start}<br>{date_end}<br>{price} | Specifies the fields to return in a result set. | ?fields="date_start","price"
 sort | {date_start order}<br>{date_end order}<br>{price order} | Specifies how to sort the result set. The value of order can be {asc} or {desc}. | ?sort="price desc"
 
 ####Examples:
