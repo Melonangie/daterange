@@ -136,7 +136,6 @@ class DaterangeService {
       while ($date = $query->fetchObject(DATERANGE_CLASS)) {
         $dates[] = $date;
       }
-
       // Commits transaction.
       $this->db->pdo()->commit();
     }
@@ -160,10 +159,10 @@ class DaterangeService {
    */
   public function readDaterangeQuery(array $extraParameters): array {
 
-    $persons = [];
+    $dates = [];
 
     // Get the  dynamic query.
-    $dynamic_query = new DaterangeQueryBuilder($this->db->get(TABLE), $extraParameters);
+    $dynamic_query = new DaterangeQueryBuilder($this->db->get('VIEW_ALL'), $extraParameters);
 
     try {
       // Begin transaction.
@@ -174,44 +173,19 @@ class DaterangeService {
       $query->execute($dynamic_query->getParamStatement());
 
       // Get selected person emails and phones.
-      while ($person = $query->fetchObject('Persons\v1\Model\Person')) {
-
-        if ($dynamic_query->getFields() == '*' || $dynamic_query->getFilterEmails()) {
-          $emails = $this->db->pdo()
-            ->prepare(sprintf('SELECT s.* FROM (select @pid:=? p) parm, %s s', $this->schema['EMAILS_VIEW']));
-          $emails->bindParam(1, $person->getId(), PDO::PARAM_INT);
-          $emails->execute();
-          while ($email = $emails->fetch(PDO::FETCH_OBJ)) {
-            $person->addEmail($email);
-          }
-        }
-
-        if ($dynamic_query->getFields() == '*' || $dynamic_query->getFilterPhones()) {
-          $phones = $this->db->pdo()
-            ->prepare(sprintf('SELECT s.* FROM (select @pid:=? p) parm, %s s', $this->schema['PHONES_VIEW']));
-          $phones->bindParam(1, $person->getId(), PDO::PARAM_INT);
-          $phones->execute();
-          while ($phone = $phones->fetch(PDO::FETCH_OBJ)) {
-            $person->addPhone($phone);
-          }
-        }
-
-        $persons[] = $person;
+      while ($date = $query->fetchObject(DATERANGE_CLASS)) {
+        $dates[] = $date;
       }
-
       // Commits transaction.
       $this->db->pdo()->commit();
-
     }
     catch (PDOException $exception) {
       $this->db->pdo()->rollBack();
       $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'PDO Connection error.', 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error);
     }
-
     // Return response.
-    return $persons;
-
+    return $dates;
   }
 
   /**

@@ -54,17 +54,22 @@ class Daterange implements JsonSerializable {
    * @param $payload
    */
   public function __construct($payload = NULL) {
+
     if (!empty($payload)) {
+
       // Sanitize payload.
       $this->sanitizePayload($payload);
+
       // Verifies all required fields are not null or empty.
       $this->verifyRequiredFields($payload);
+
       // Map the request payload with the Daterange fields.
       foreach ($payload as $field => $val) {
         if (property_exists(__CLASS__, $field)) {
           $this->$field = $val;
         }
       }
+
     }
 
   }
@@ -105,6 +110,7 @@ class Daterange implements JsonSerializable {
     ];
 
     try {
+
       // walk the array.
       foreach ($payload as $field => $field_value) {
         // Sanitize
@@ -120,6 +126,7 @@ class Daterange implements JsonSerializable {
           }
         }
       }
+
     }
     catch (\Exception $exception) {
       $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
@@ -127,6 +134,7 @@ class Daterange implements JsonSerializable {
     }
 
     unset($filters);
+
     return $filtered;
   }
 
@@ -139,6 +147,7 @@ class Daterange implements JsonSerializable {
    * @return string
    */
   protected function validateDate($date, $format = 'Y-m-d H:i:s'): string {
+
     try {
       $d = DateTime::createFromFormat($format, $date);
       if (!($d && $d->format($format) == $date)) {
@@ -149,13 +158,17 @@ class Daterange implements JsonSerializable {
     catch (RestException $exception) {
       throw $exception;
     }
+
     return $date;
   }
 
   /**
    * Verifies all required fields are not null or empty.
+   *
+   * @param array $payload
    */
-  public function verifyRequiredFields($payload): void {
+  public function verifyRequiredFields(array $payload): void {
+
     try {
       foreach ($payload as $field => $field_value) {
         if (empty($field_value) && array_key_exists($field, $this->getRequiredProperties())) {
@@ -167,6 +180,7 @@ class Daterange implements JsonSerializable {
     catch (RestException $exception) {
       throw $exception;
     }
+
   }
 
   /**
@@ -185,6 +199,28 @@ class Daterange implements JsonSerializable {
    */
   public function getRequiredProperties(): array {
     return ['date_start', 'date_end', 'price'];
+  }
+
+  /**
+   * Updates current Daterange instance based on another Daterange instance.
+   *
+   * @param $new_person Daterange
+   */
+  public function update(Daterange $new_person): void {
+    foreach ($this->getUpdateProperties() as $property) {
+      if ($new_person->$property) {
+        $this->$property = $new_person->$property;
+      }
+    }
+  }
+
+  /**
+   * Function called when encoded with json_encode.
+   *
+   * @return array|mixed
+   */
+  public function jsonSerialize() {
+    return array_filter(get_object_vars($this));
   }
 
   /**
@@ -256,49 +292,5 @@ class Daterange implements JsonSerializable {
   public function setPrice(float $price): void {
     $this->price = $price;
   }
-
-  /**
-   * Returns a manually generated array of the sorting properties for Daterange.
-   * The structure it returns is similar to 'get_object_vars'.
-   *
-   * @return array
-   */
-  public function getSortingProperties(): array {
-    return $this->getFilteringProperties();
-  }
-
-  /**
-   * Updates current Daterange instance based on another Daterange instance.
-   *
-   * @param $new_person Daterange
-   */
-  public function update(Daterange $new_person): void {
-    foreach ($this->getUpdateProperties() as $property) {
-      if ($new_person->$property) {
-        $this->$property = $new_person->$property;
-      }
-    }
-  }
-
-  /**
-   * Returns a manually generated array of the updating properties for
-   * Daterange.
-   *
-   * @return array
-   */
-  public function getUpdateProperties(): array {
-    return $this->getRequiredProperties();
-  }
-
-  /**
-   * Function called when encoded with json_encode.
-   *
-   * @return array|mixed
-   */
-  public function jsonSerialize() {
-    return array_filter(get_object_vars($this));
-  }
-
-
 
 }

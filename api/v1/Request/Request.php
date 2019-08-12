@@ -89,7 +89,6 @@ class Request {
   protected function get_request_method(): string {
 
     // Gets the request method.
-    // $method = mb_strtoupper(filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_STRING));
     $method = strtoupper(filter_var($_SERVER['REQUEST_METHOD'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH));
 
     // Checks is one of the expected value.
@@ -113,7 +112,6 @@ class Request {
   protected function get_content_type(): string {
 
     // Gets content type.
-//      $this->contentType = trim(mb_strtolower(filter_input(INPUT_SERVER, 'CONTENT_TYPE', FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
     $content_type = strtolower(trim(filter_var($_SERVER['CONTENT_TYPE'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
 
     // Checks is expected value.
