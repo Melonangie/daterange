@@ -65,7 +65,7 @@ class Request {
     $this->method = $this->get_request_method();
 
     // The content type of the request must be application/json.
-    $this->verify_content_type();
+    $this->contentType = $this->get_content_type();
 
     // Set the request route.
     $this->route = $this->get_request_route();
@@ -107,23 +107,26 @@ class Request {
 
   /**
    * Verify if the request content type headers.
+   *
+   * @return string
    */
-  protected function verify_content_type(): void {
+  protected function get_content_type(): string {
 
     // Gets content type.
 //      $this->contentType = trim(mb_strtolower(filter_input(INPUT_SERVER, 'CONTENT_TYPE', FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
-    $this->contentType = strtolower(trim(filter_var($_SERVER['CONTENT_TYPE'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
+    $content_type = strtolower(trim(filter_var($_SERVER['CONTENT_TYPE'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
 
     // Checks is expected value.
-    if (strcmp($this->contentType, CONTENT_TYPE_JSON) !== 0) {
+    if (strcmp($content_type, CONTENT_TYPE_JSON) !== 0) {
       $error = [
-        'msg' => 'Request content-type must be: ' . CONTENT_TYPE_JSON . '. Found: ' . $this->contentType,
+        'msg' => 'Request content-type must be: ' . CONTENT_TYPE_JSON . '. Found: ' . $content_type,
         'class' => __CLASS__,
         'func' => __FUNCTION__,
       ];
       throw new RestException($error, 400);
     }
 
+    return $content_type;
   }
 
   /**
@@ -154,7 +157,7 @@ class Request {
   protected function get_request_parameter(): ?string {
 
     // Only get the parameter for GET and DELETE.
-    if ((strcasecmp($this->method, POST) === 0) || (strcasecmp($this->method, PUT) === 0)) {
+    if (strcasecmp($this->method, PUT) === 0) {
       return NULL;
     }
 
@@ -164,14 +167,26 @@ class Request {
       return NULL;
     }
 
-    // Gets the request parameter GET /{date_start}.
+    // Gets the request parameter.
     $param = trim(filter_input(INPUT_GET, PARAMETER, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH));
 
-    // Checks the parameter is a valid date.
-    $d = DateTime::createFromFormat('Y-m-d', $param);
-    if (!($d && $d->format('Y-m-d') == $param)) {
+    // Checks the parameter GET /{date_start} is a valid date.
+    if (strcasecmp($this->method, GET) === 0) {
+      $d = DateTime::createFromFormat('Y-m-d', $param);
+      if (!($d && $d->format('Y-m-d') == $param)) {
+        $error = [
+          'msg' => 'The unique identifier must be a valid date. Found: ' . $param,
+          'class' => __CLASS__,
+          'func' => __FUNCTION__,
+        ];
+        throw new RestException($error, 400);
+      }
+    }
+
+    // Checks the parameter POST is /all.
+    if ((strcasecmp($this->method, POST) === 0) && strcasecmp($param, 'all') !== 0) {
       $error = [
-        'msg' => 'The unique identifier must be a valid date. Found: ' . $param,
+        'msg' => 'The parameter: ' . $param . ' is not recognize.',
         'class' => __CLASS__,
         'func' => __FUNCTION__,
       ];
@@ -212,9 +227,9 @@ class Request {
   /**
    * Gets the request payload as an associative array.
    *
-   * @return array
+   * @return array|null
    */
-  protected function get_request_payload(): array {
+  protected function get_request_payload(): ?array {
 
     // Not available for GET nor DELETE.
     if ((strcasecmp($this->method, GET) === 0) || (strcasecmp($this->method, DELETE) === 0)) {
@@ -236,7 +251,7 @@ class Request {
       }
     }
 
-    // Un-sanitized payload.
+    // Returns un-sanitized payload.
     return $payload;
   }
 
@@ -259,11 +274,11 @@ class Request {
   }
 
   /**
-   * Gets the request parameter for GET /{id}.
+   * Gets the request parameter for GET /{string}.
    *
-   * @return int|null
+   * @return string|null
    */
-  public function getParameter(): ?int {
+  public function getParameter(): ?string {
     return $this->parameter;
   }
 
@@ -279,9 +294,9 @@ class Request {
   /**
    * Gets the request payload.
    *
-   * @return mixed|null
+   * @return array|null
    */
-  public function getPayload() {
+  public function getPayload(): ?array {
     return $this->payload;
   }
 

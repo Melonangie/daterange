@@ -2,13 +2,13 @@
 
 namespace Daterange\v1\Database;
 
-use Daterange\Exception\RestException;
+use Daterange\v1\Exception\RestException;
 use Exception;
 use PDO;
 use PDOException;
 
 // Get DB Configurations.
-require_once __DIR__ . '../../Config/DBConfigurations.inc.php';
+require_once __DIR__ . '../../../Config/DBConfigurations.inc.php';
 
 /**
  * Class that holds the data base connection.
@@ -97,12 +97,6 @@ class DBConnection {
         $db_configs[PDO]
       );
 
-      $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-      $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_OBJ);
-      $this->pdo->setAttribute(PDO::ATTR_PERSISTENT, FALSE);
-      $this->pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, FALSE);
-      $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, FALSE);
-
     }
       // Log exception and throw error.
     catch (PDOException | Exception $exception) {
@@ -119,15 +113,6 @@ class DBConnection {
   }
 
   /**
-   * Gets the database schema.
-   *
-   * @param array $db_configs
-   */
-  private function setTableSchema(array $db_configs): void {
-    $this->schema = $db_configs[$this->driver][SCHEMA];
-  }
-
-  /**
    * Gets the Database PDO.
    *
    * @return \PDO
@@ -141,10 +126,19 @@ class DBConnection {
    *
    * @param string $element
    *
-   * @return array
+   * @return string
    */
-  public function get(string $element): array {
+  public function get(string $element): string {
     return $this->schema[$element];
+  }
+
+  /**
+   * Gets the Database PDO.
+   *
+   * @return \PDO
+   */
+  public function getPdo(): PDO {
+    return $this->pdo;
   }
 
   /**
@@ -154,6 +148,15 @@ class DBConnection {
    */
   public function getSchema(): array {
     return $this->schema;
+  }
+
+  /**
+   * Gets the database schema.
+   *
+   * @param array $db_configs
+   */
+  private function setTableSchema(array $db_configs): void {
+    $this->schema = $db_configs[$this->driver][SCHEMA];
   }
 
   /**

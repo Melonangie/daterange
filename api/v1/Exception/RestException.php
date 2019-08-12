@@ -166,8 +166,8 @@
         'Function' => $error['func'],
         'File' => $this->getFile(),
         'Line' => $this->getLine(),
-        'Code' => $this->getCode() ?? $error['err_code'],
-        'Message' => $this->getMessage() ?? $error['err_msg'],
+        'Code' => $this->getCode() ?? @$error['err_code'],
+        'Message' => $this->getMessage() ?? @$error['err_msg'],
         'Trace' => $this->getTraceAsString(),
       ];
       error_log(print_r($this->logDetails, TRUE), 0);

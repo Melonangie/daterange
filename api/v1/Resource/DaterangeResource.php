@@ -236,6 +236,12 @@ Class DaterangeResource {
    */
   public function delete(): array {
 
+    // Delete all records.
+    if ($this->request->getParameter() !== NULL) {
+      return $this->service->deleteDaterangeAll();
+    }
+
+    // Deletes all records
     // Verifies record exist.
     if (!$this->service->verifyExist('date_start', $this->request->getParameter())) {
       $error = [

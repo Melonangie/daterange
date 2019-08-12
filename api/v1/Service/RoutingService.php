@@ -77,7 +77,6 @@ class RoutingService {
     $this->resourceName = ucfirst($this->request->getRoute()) . 'Resource';
 
     // Sets the full resource name.
-    #$this->fullResourceName = 'Daterange\v1\Resource\\' . $this->resourceName;
     $this->fullResourceName = RESOURCE_NAMESPACE . $this->resourceName;
 
     // Check resource exist.

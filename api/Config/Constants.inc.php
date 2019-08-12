@@ -15,10 +15,9 @@ define('DSN', 'dsn');
 define('PDO', 'pdo');
 define('PDO_PARAMS', 'pdo_params');
 define('SCHEMA', 'schema');
-define('TABLE', 'table');
-define('VIEW', 'view');
 define('DATES_TABLE', 'dates');
-define('DATES_VIEW', 'date_ranges');
+define('DATES_VIEW', 'single_date');
+define('DATES_VIEW_ALL', 'all_dates');
 
 // Query constants.
 define('FILTER', 'filter');
@@ -50,7 +49,7 @@ define('DATE_ENDS', 'date_end');
 define('PRICE', 'price');
 define('V1', 'v1');
 define('RESOURCE_NAMESPACE', 'Daterange\v1\Resource\\');
-define('DATERANGE_CLASS', 'Daterange\v1\Model\Daterange\\');
+define('DATERANGE_CLASS', 'Daterange\v1\Model\Daterange');
 
 // Define REST messages constants.
 define('MSG_FATAL_EXCEPTION', 'Application service not available');

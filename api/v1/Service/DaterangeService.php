@@ -36,8 +36,6 @@ class DaterangeService {
     // Set PDO.
     $this->db = $db;
 
-
-
   }
 
   /**
@@ -67,7 +65,7 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Insert the person to the main DB table.
-      $query = $this->db->pdo()->prepare(sprintf('INSERT INTO `%s` (%s, %s, %s) VALUES (:date_starts, :date_ends, :price)', $this->db->get(TABLE), DATE_STARTS, DATE_ENDS, PRICE));
+      $query = $this->db->pdo()->prepare(sprintf('INSERT INTO `%s` (%s, %s, %s) VALUES (:date_starts, :date_ends, :price)', $this->db->get('TABLE'), DATE_STARTS, DATE_ENDS, PRICE));
       $query->bindValue(':date_starts', $daterange->getDateStart(), PDO::PARAM_STR);
       $query->bindValue(':date_ends', $daterange->getDateEnd(), PDO::PARAM_STR);
       $query->bindValue(':price', (string) $daterange->getPrice(), PDO::PARAM_STR);
@@ -98,8 +96,10 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Gets a specific record from the DB.
-      $query = $this->db->pdo()->prepare(sprintf('SELECT * FROM `%s` WHERE `%s`=:date_start', $this->db->get(TABLE), DATE_STARTS));
-      $query->bindParam(':date_start', $date_start, PDO::PARAM_STR);
+//      $query = $this->db->pdo()->prepare(sprintf('SELECT * FROM `%s` WHERE `%s`=:date_start', $this->db->get(TABLE), DATE_STARTS));
+      $query = $this->db->pdo()->prepare(sprintf('SELECT s.* FROM (select @pid:=? p) parm, %s s', $this->db->get('VIEW')));
+      $query->bindParam(1, $date_start, PDO::PARAM_STR);
+//      $query->bindParam(':date_start', $date_start, PDO::PARAM_STR);
       $query->execute();
       $date = $query->fetchObject(DATERANGE_CLASS);
 
@@ -130,7 +130,7 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Gets all persons from the DB.
-      $query = $this->db->pdo()->query(sprintf('SELECT * FROM `%s` ORDER BY `date_start`', $this->db->get(TABLE)));
+      $query = $this->db->pdo()->query(sprintf('SELECT * FROM %s', $this->db->get('VIEW_ALL')));
 
       // Get selected person emails and phones.
       while ($date = $query->fetchObject(DATERANGE_CLASS)) {
@@ -158,7 +158,7 @@ class DaterangeService {
    *
    * @return array
    */
-  public function readDaterangeQuery(array $extraParameters) {
+  public function readDaterangeQuery(array $extraParameters): array {
 
     $persons = [];
 
@@ -227,7 +227,7 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Insert the person to the main DB table.
-      $query = $this->db->pdo()->prepare(sprintf('UPDATE `%s` SET `%s`=:modified, `%s`=:date_end, `%s`=:price WHERE `%s`=:date_start', $this->db->get(TABLE), MODIFIED, DATE_ENDS, PRICE, DATE_STARTS));
+      $query = $this->db->pdo()->prepare(sprintf('UPDATE `%s` SET `%s`=:modified, `%s`=:date_end, `%s`=:price WHERE `%s`=:date_start', $this->db->get('TABLE'), MODIFIED, DATE_ENDS, PRICE, DATE_STARTS));
       $query->bindValue(':modified', date('Y-m-d H:i:s'), PDO::PARAM_STR);
       $query->bindValue(':date_end', $daterange->getDateEnd(), PDO::PARAM_STR);
       $query->bindValue(':price', (string) $daterange->getPrice(), PDO::PARAM_STR);
@@ -261,7 +261,7 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Deletes record.
-      $query = $this->db->pdo()->prepare(sprintf('DELETE FROM `%s` WHERE `%s`=:date_start', $this->db->get(TABLE), DATE_STARTS));
+      $query = $this->db->pdo()->prepare(sprintf('DELETE FROM `%s` WHERE `%s`=:date_start', $this->db->get('TABLE'), DATE_STARTS));
       $query->bindValue(':date_start', $date_start, PDO::PARAM_STR);
       $query->execute();
 
@@ -290,7 +290,7 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Gets a specific person from the DB.
-      $query = $this->db->pdo()->query(sprintf('TRUNCATE TABLE `%s`', $this->db->get(TABLE)));
+      $query = $this->db->pdo()->query(sprintf('TRUNCATE TABLE `%s`', $this->db->get('TABLE')));
 
       // Commits transaction.
       $this->db->pdo()->commit();
@@ -319,7 +319,7 @@ class DaterangeService {
   public function verifyExist(string $field, $field_value, $pdo_param = PDO::PARAM_STR, $table = NULL): bool {
 
     if ($table === NULL) {
-      $table = $this->db->get(TABLE);
+      $table = $this->db->get('TABLE');
     }
 
     $exist = FALSE;
