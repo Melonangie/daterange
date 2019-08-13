@@ -89,6 +89,7 @@ class Request {
   protected function get_request_method(): string {
 
     // Gets the request method.
+
     $method = strtoupper(filter_var($_SERVER['REQUEST_METHOD'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH));
 
     // Checks is one of the expected value.

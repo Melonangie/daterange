@@ -96,10 +96,8 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Gets a specific record from the DB.
-//      $query = $this->db->pdo()->prepare(sprintf('SELECT * FROM `%s` WHERE `%s`=:date_start', $this->db->get(TABLE), DATE_STARTS));
       $query = $this->db->pdo()->prepare(sprintf('SELECT s.* FROM (select @pid:=? p) parm, %s s', $this->db->get('VIEW')));
       $query->bindParam(1, $date_start, PDO::PARAM_STR);
-//      $query->bindParam(':date_start', $date_start, PDO::PARAM_STR);
       $query->execute();
       $date = $query->fetchObject(DATERANGE_CLASS);
 
@@ -172,10 +170,11 @@ class DaterangeService {
       $query = $this->db->pdo()->prepare($dynamic_query->getQueryStatement());
       $query->execute($dynamic_query->getParamStatement());
 
-      // Get selected person emails and phones.
+      // Get selected records.
       while ($date = $query->fetchObject(DATERANGE_CLASS)) {
         $dates[] = $date;
       }
+
       // Commits transaction.
       $this->db->pdo()->commit();
     }
@@ -293,7 +292,7 @@ class DaterangeService {
   public function verifyExist(string $field, $field_value, $pdo_param = PDO::PARAM_STR, $table = NULL): bool {
 
     if ($table === NULL) {
-      $table = $this->db->get('TABLE');
+      $table = $this->db->get('VIEW');
     }
 
     $exist = FALSE;
@@ -303,11 +302,67 @@ class DaterangeService {
       $this->db->pdo()->beginTransaction();
 
       // Checks record exist.
-      $some_table = $this->db->pdo()->prepare(sprintf('SELECT 1 from `%s` WHERE `%s`=:field_value LIMIT 1', $table, $field));
+      $some_table = $this->db->pdo()->prepare(sprintf('SELECT 1 FROM `%s` WHERE `%s`=:field_value LIMIT 1', $table, $field));
       $some_table->bindValue(':field_value', $field_value, $pdo_param);
       $some_table->execute();
       if ($some_table->fetchColumn()) {
         $exist = TRUE;
+      }
+
+      // Commits transaction.
+      $this->db->pdo()->commit();
+    }
+    catch (PDOException $exception) {
+      $this->db->pdo()->rollBack();
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
+      throw new RestException($error);
+    }
+
+    return $exist;
+  }
+
+  /**
+   * Gets the information for neighbors.
+   *
+   * @param string $date_start
+   * @param string $date_end
+   *
+   * @return array
+   */
+  public function getNextPrevDates(string $date_start, string $date_end): array {
+
+    $dates = [];
+
+    try {
+      // Begin transaction.
+      $this->db->pdo()->beginTransaction();
+
+//SELECT
+//*
+//FROM
+//magazines
+//WHERE
+//start = (select max(start) from magazines where start < '2019-08-14')
+//OR end = (select min(end) from magazines where end > '2019-08-20')
+//or (start BETWEEN '2019-08-14' AND '2019-08-20')
+//GROUP BY 1 ORDER BY start ASC
+
+      $sql = sprintf('SELECT * FROM `%s`
+        WHERE 
+            `DATE_STARTS` = (SELECT MAX(`DATE_STARTS`) FROM `%s` WHERE `DATE_STARTS` < :date_start)
+        OR 
+            `DATE_STARTS` BETWEEN :date_start AND :date_end
+        GROUP BY 1',
+                     $this->db->get('VIEW_ALL'), $this->db->get('VIEW_ALL'));
+
+      // Checks record exist.
+      $query = $this->db->pdo()->prepare($sql);
+      $query->bindValue(':date_start', $date_start, PDO::PARAM_STR);
+      $query->bindValue(':date_start', $date_start, PDO::PARAM_STR);
+      $query->bindValue(':date_end', $date_end, PDO::PARAM_STR);
+      $query->execute();
+      while ($date = $query->fetchObject(DATERANGE_CLASS)) {
+        $dates[] = $date;
       }
 
       // Commits transaction.
@@ -320,7 +375,7 @@ class DaterangeService {
       throw new RestException($error);
     }
 
-    return $exist;
+    return $dates;
   }
 
   /**

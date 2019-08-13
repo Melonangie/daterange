@@ -63,6 +63,9 @@ class Daterange implements JsonSerializable {
       // Verifies all required fields are not null or empty.
       $this->verifyRequiredFields($payload);
 
+      // Verify dates.
+      $this->verifyDates($payload);
+
       // Map the request payload with the Daterange fields.
       foreach ($payload as $field => $val) {
         if (property_exists(__CLASS__, $field)) {
@@ -147,7 +150,6 @@ class Daterange implements JsonSerializable {
    * @return string
    */
   protected function validateDate($date, $format = 'Y-m-d H:i:s'): string {
-
     try {
       $d = DateTime::createFromFormat($format, $date);
       if (!($d && $d->format($format) == $date)) {
@@ -158,7 +160,6 @@ class Daterange implements JsonSerializable {
     catch (RestException $exception) {
       throw $exception;
     }
-
     return $date;
   }
 
@@ -167,8 +168,7 @@ class Daterange implements JsonSerializable {
    *
    * @param array $payload
    */
-  public function verifyRequiredFields(array $payload): void {
-
+  protected function verifyRequiredFields(array $payload): void {
     try {
       foreach ($payload as $field => $field_value) {
         if (empty($field_value) && array_key_exists($field, $this->getRequiredProperties())) {
@@ -180,7 +180,115 @@ class Daterange implements JsonSerializable {
     catch (RestException $exception) {
       throw $exception;
     }
+  }
 
+  /**
+   * Verifies the start and end dates.
+   *
+   * @param array $payload
+   */
+  protected function verifyDates(array $payload): void {
+    try {
+      $start = new DateTime($payload['date_start']);
+      $end = new DateTime($payload['date_end']);
+      if ($start > $end) {
+        $error = ['msg' => 'The end date must be grater or equal to the start date. Start date: ' . $payload['date_start'] . '. End date: ' . $payload['date_end'], 'class' => __CLASS__, 'func' => __METHOD__,];
+        throw new RestException($error);
+      }
+    }
+    catch (RestException | \Exception $exception) {
+      throw $exception;
+    }
+  }
+
+  /**
+   * Updates current Daterange instance based on another Daterange instance.
+   *
+   * @param array $neighbors
+   *
+   * @return array
+   * @throws \Exception
+   */
+  public function update(array $neighbors): array {
+
+    $current_start = new DateTime($this->date_start);
+    $current_end = new DateTime($this->date_end);
+
+    $add = [];
+    $delete = [];
+
+    foreach ($neighbors as $i => $date) {
+      $start = new DateTime($date->date_start);
+      $end = new DateTime($date->date_end);
+
+      // Merges
+      if (abs(($this->price - $date->price) / $date->price) < 0.00001) {
+
+        // start is before - end is after
+        if ($start < $current_start && $end > $current_end) {
+          $this->date_start = $date->date_start;
+          $this->date_end = $date->date_end;
+          $delete[] = $i;
+        }
+
+        // start is before - end is at or before
+        elseif ($start < $current_start && $end <= $current_end) {
+          $this->date_start = $date->date_start;
+          $delete[] = $i;
+        }
+
+        // start is at or after - ends at or before
+        elseif ($start >= $current_start && $end <= $current_end) {
+          $delete[] = $i;
+        }
+
+        // start is at or after - ends is after
+        elseif ($start >= $current_start && $end > $current_end) {
+          $this->date_end = $date->date_end;
+          $delete[] = $i;
+        }
+      }
+
+      // Splits
+      else {
+        // start is before - end is after
+        if ($start < $current_start && $end > $current_end) {
+          $new = new Daterange();
+          $new->date_start = $end;
+          $new->date_start = $new->date_start->modify('+1 day')->format(DATE_FORMAT);
+          $new->date_end = $date->date_end;
+          $new->price = $date->price;
+          $add[] = $new;
+          $date->date_end = $current_start;
+          $date->date_end->modify('-1 day')->format(DATE_FORMAT);
+        }
+
+        // start is before - end is at or before
+        elseif ($start < $current_start && $end <= $current_end) {
+          $date->date_end = $current_start;
+          $date->date_end->modify('-1 day')->format(DATE_FORMAT);
+        }
+
+        // start is at or after - ends at or before
+        elseif ($start >= $current_start && $end <= $current_end) {
+          $delete[] = $i;
+        }
+
+        // start is at or after - ends is after
+        elseif ($start >= $current_start && $end > $current_end) {
+          $date->date_start = $current_end;
+          $date->date_start->modify('+1 day')->format(DATE_FORMAT);
+        }
+      }
+    }
+
+    foreach ($delete as $key) {
+      unset($neighbors[$key]);
+    }
+
+    $neighbors = array_merge($neighbors, $add);
+
+    return $neighbors;
   }
 
   /**
@@ -199,19 +307,6 @@ class Daterange implements JsonSerializable {
    */
   public function getRequiredProperties(): array {
     return ['date_start', 'date_end', 'price'];
-  }
-
-  /**
-   * Updates current Daterange instance based on another Daterange instance.
-   *
-   * @param $new_person Daterange
-   */
-  public function update(Daterange $new_person): void {
-    foreach ($this->getUpdateProperties() as $property) {
-      if ($new_person->$property) {
-        $this->$property = $new_person->$property;
-      }
-    }
   }
 
   /**

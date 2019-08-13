@@ -76,7 +76,7 @@ Class DaterangeResource {
    * @return DBConnection
    */
   private function setDriver(): DBConnection {
-    // Here you put the logic to selecting the store engine.
+    // Here goes the logic to select a store engine.
     return new DBConnection(MYSQL);
   }
 
@@ -121,8 +121,6 @@ Class DaterangeResource {
 
     // Gets all records.
     if ($this->request->getParameter() === NULL) {
-
-      // Gets all records.
       if ($this->request->getExtraParameters() === NULL) {
         return $this->service->readDaterangeAll();
       }
@@ -133,14 +131,8 @@ Class DaterangeResource {
     }
 
     // Gets a single record by start date.
-    // Verifies record exist.
-    // There are no business rules, this is the place to get them ans use them.
     if (!$this->service->verifyExist(DATE_STARTS, $this->request->getParameter())) {
-      $error = [
-        'msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(),
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
+      $error = ['msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(), 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error, 404);
     }
     return $this->service->readDaterange($this->request->getParameter());
@@ -158,26 +150,31 @@ Class DaterangeResource {
     try {
       $daterange = new Daterange($this->request->getPayload());
       if ($daterange === NULL) {
-        $error = [
-          'msg' => 'There was an error loading the new object.',
-          'class' => __CLASS__,
-          'func' => __METHOD__,
-        ];
+        $error = ['msg' => 'There was an error loading the new object.', 'class' => __CLASS__, 'func' => __METHOD__,];
         throw new RestException($error, 400);
       }
     }
     catch (Exception $exception) {
-      $error = [
-        'err_msg' => $exception->getMessage(),
-        'err_code' => $exception->getCode(),
-        'msg' => 'Couldn\'t process payload.',
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Couldn\'t process payload.', 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error);
     }
 
-    return $this->service->createDaterange($daterange);
+    // Gets the neighbors data.
+    $neighbors = $this->service->getNextPrevDates($daterange->getDateStart(), $daterange->getDateEnd());
+
+    try {
+      $new_neighbors = $daterange->update($neighbors);
+    }
+    catch (Exception $exception) {
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Couldn\'t process payload.', 'class' => __CLASS__, 'func' => __METHOD__,];
+      throw new RestException($error);
+    }
+
+    // Drop the records.
+    $this->service->deleteDateranges($date);
+
+    // Recreate the records.
+    return $this->service->createDateranges($date);
   }
 
   /**
@@ -191,32 +188,18 @@ Class DaterangeResource {
     try {
       $daterange = new Daterange($this->request->getPayload());
       if ($daterange === NULL) {
-        $error = [
-          'msg' => 'There was an error loading the new object.',
-          'class' => __CLASS__,
-          'func' => __METHOD__,
-        ];
+        $error = ['msg' => 'There was an error loading the new object.', 'class' => __CLASS__, 'func' => __METHOD__,];
         throw new RestException($error, 400);
       }
     }
     catch (Exception $exception) {
-      $error = [
-        'err_msg' => $exception->getMessage(),
-        'err_code' => $exception->getCode(),
-        'msg' => 'Couldn\'t process payload.',
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Couldn\'t process payload.', 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error);
     }
 
     // Verifies the instance exist.
     if (!$this->service->verifyExist('date_start', $daterange->getDateStart())) {
-      $error = [
-        'msg' => "A record with the request id doesn't exist. Start date: " . $daterange->getDateStart(),
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
+      $error = ['msg' => "A record with the request id doesn't exist. Start date: " . $daterange->getDateStart(), 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error, 404);
     }
 
@@ -241,14 +224,10 @@ Class DaterangeResource {
       return $this->service->deleteDaterangeAll();
     }
 
-    // Deletes all records
+    // Deletes a single record.
     // Verifies record exist.
     if (!$this->service->verifyExist('date_start', $this->request->getParameter())) {
-      $error = [
-        'msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(),
-        'class' => __CLASS__,
-        'func' => __METHOD__,
-      ];
+      $error = ['msg' => "A record with the request start date doesn't exist. Start date: " . $this->request->getParameter(), 'class' => __CLASS__, 'func' => __METHOD__,];
       throw new RestException($error, 404);
     }
 
