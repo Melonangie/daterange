@@ -1,8 +1,7 @@
 <?php
 
 // Set charset constant.
-// define('CHARSET', mb_strtoupper(filter_input(INPUT_ENV, 'CHARSET', FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
-define('CHARSET', mb_strtoupper(filter_var($_ENV['CHARSET'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
+define('CHARSET', strtoupper(filter_var($_ENV['CHARSET'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH)));
 define('PROTOCOL', filter_var($_SERVER['REQUEST_SCHEME'], FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH));
 define('HOST', filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_URL));
 

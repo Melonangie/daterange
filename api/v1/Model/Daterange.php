@@ -217,7 +217,7 @@ class Daterange implements JsonSerializable {
     $add = [];
     $delete = [];
 
-    foreach ($neighbors as $i => $date) {
+    foreach ($neighbors as $date) {
       $start = new DateTime($date->date_start);
       $end = new DateTime($date->date_end);
 
@@ -226,26 +226,27 @@ class Daterange implements JsonSerializable {
 
         // start is before - end is after
         if ($start < $current_start && $end > $current_end) {
-          $this->date_start = $date->date_start;
-          $this->date_end = $date->date_end;
-          $delete[] = $i;
+          break;
         }
 
         // start is before - end is at or before
         elseif ($start < $current_start && $end <= $current_end) {
+          $delete[] = $date->date_start;
           $this->date_start = $date->date_start;
-          $delete[] = $i;
+          $add[] = $this;
         }
 
         // start is at or after - ends at or before
         elseif ($start >= $current_start && $end <= $current_end) {
-          $delete[] = $i;
+          $delete[] = $date->date_start;
+          $add[] = $this;
         }
 
         // start is at or after - ends is after
         elseif ($start >= $current_start && $end > $current_end) {
+          $delete[] = $date->date_start;
           $this->date_end = $date->date_end;
-          $delete[] = $i;
+          $add[] = $this;
         }
       }
 
@@ -253,40 +254,44 @@ class Daterange implements JsonSerializable {
       else {
         // start is before - end is after
         if ($start < $current_start && $end > $current_end) {
+          $delete[] = $date->date_start;
           $new = new Daterange();
-          $new->date_start = $end;
-          $new->date_start = $new->date_start->modify('+1 day')->format(DATE_FORMAT);
+          $new->date_start = date_format($end->modify('+1 day'), DATE_FORMAT);
           $new->date_end = $date->date_end;
           $new->price = $date->price;
           $add[] = $new;
-          $date->date_end = $current_start;
-          $date->date_end->modify('-1 day')->format(DATE_FORMAT);
+          $date->date_end = date_format($current_start->modify('-1 day'), DATE_FORMAT);
+          $add[] = $date;
+          $add[] = $this;
         }
 
         // start is before - end is at or before
         elseif ($start < $current_start && $end <= $current_end) {
-          $date->date_end = $current_start;
-          $date->date_end->modify('-1 day')->format(DATE_FORMAT);
+          $delete[] = $date->date_start;
+          $date->date_end = date_format($current_start->modify('-1 day'), DATE_FORMAT);
+          $add[] = $date;
+          $add[] = $this;
         }
 
         // start is at or after - ends at or before
         elseif ($start >= $current_start && $end <= $current_end) {
-          $delete[] = $i;
+          $delete[] = $date->date_start;
+          $add[] = $this;
         }
 
         // start is at or after - ends is after
         elseif ($start >= $current_start && $end > $current_end) {
-          $date->date_start = $current_end;
-          $date->date_start->modify('+1 day')->format(DATE_FORMAT);
+          $delete[] = $date->date_start;
+          $date->date_start = date_format($current_end->modify('+1 day'),DATE_FORMAT);
+          $add[] = $date;
+          $add[] = $this;
         }
       }
     }
 
-    foreach ($delete as $key) {
-      unset($neighbors[$key]);
-    }
-
-    $neighbors = array_merge($neighbors, $add);
+    $neighbors = [];
+    $neighbors['delete'] = $delete;
+    $neighbors['add'] = $add;
 
     return $neighbors;
   }
