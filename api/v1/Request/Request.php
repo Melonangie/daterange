@@ -156,7 +156,7 @@ class Request {
   protected function get_request_parameter(): ?string {
 
     // Only get the parameter for GET and DELETE.
-    if (strcasecmp($this->method, PUT) === 0) {
+    if (strcasecmp($this->method, PUT) === 0 || strcasecmp($this->method, POST) === 0) {
       return NULL;
     }
 

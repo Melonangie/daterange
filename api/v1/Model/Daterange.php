@@ -30,14 +30,14 @@ class Daterange implements JsonSerializable {
   /**
    * Record start date.
    *
-   * @var $date_start string
+   * @var $date_start DateTime
    */
   protected $date_start;
 
   /**
    * Record end date.
    *
-   * @var $date_end string
+   * @var $date_end DateTime
    */
   protected $date_end;
 
@@ -58,13 +58,7 @@ class Daterange implements JsonSerializable {
     if (!empty($payload)) {
 
       // Sanitize payload.
-      $this->sanitizePayload($payload);
-
-      // Verifies all required fields are not null or empty.
-      $this->verifyRequiredFields($payload);
-
-      // Verify dates.
-      $this->verifyDates($payload);
+      $payload = $this->sanitizePayload($payload);
 
       // Map the request payload with the Daterange fields.
       foreach ($payload as $field => $val) {
@@ -73,8 +67,27 @@ class Daterange implements JsonSerializable {
         }
       }
 
+      // Verifies all required fields are not null or empty.
+      $this->verifyRequiredFields();
+
+      // Verify dates.
+      $this->verifyDates();
+
     }
 
+    // Sets the values from fetch object.
+    is_string($this->date_start) ? $this->setDateStartFromString($this->date_start) : NULL;
+    is_string($this->date_end) ? $this->setDateEndFromString($this->date_end) : NULL;
+    is_string($this->price) ? $this->setPriceFromString($this->price) : NULL;
+
+  }
+
+  /**
+   * Daterange clone.
+   */
+  public function __clone() {
+    // Unset id.
+    $this->id = null;
   }
 
   /**
@@ -96,7 +109,7 @@ class Daterange implements JsonSerializable {
       ],
       'modified' => [
         'filter' => FILTER_SANITIZE_STRING,
-        'format' => 'Y-m-d H:i:s'
+        'validate' => FILTER_FLAG_STRIP_HIGH
       ],
       'date_start' => [
         'filter' => FILTER_SANITIZE_STRING,
@@ -121,8 +134,8 @@ class Daterange implements JsonSerializable {
         $field_value = filter_var(trim($field_value), $args[$field]['filter']);
         if (property_exists(__CLASS__, $field)) {
           // Validate
-          if ($field == MODIFIED || $field == DATE_STARTS || $field == DATE_ENDS) {
-            $filtered[$field] = $this->validateDate($field_value, $args[$field]['format']);
+          if ($field === DATE_STARTS || $field === DATE_ENDS) {
+            $filtered[$field] = $this->getValidDate($field_value, $args[$field]['format']);
           }
           else {
             $filtered[$field] = filter_var($field_value, $args[$field]['validate']);
@@ -147,9 +160,9 @@ class Daterange implements JsonSerializable {
    * @param string $date
    * @param string $format
    *
-   * @return string
+   * @return DateTime
    */
-  protected function validateDate($date, $format = 'Y-m-d H:i:s'): string {
+  protected function getValidDate(string $date, string $format = 'Y-m-d'): DateTime {
     try {
       $d = DateTime::createFromFormat($format, $date);
       if (!($d && $d->format($format) == $date)) {
@@ -160,18 +173,16 @@ class Daterange implements JsonSerializable {
     catch (RestException $exception) {
       throw $exception;
     }
-    return $date;
+    return $d;
   }
 
   /**
    * Verifies all required fields are not null or empty.
-   *
-   * @param array $payload
    */
-  protected function verifyRequiredFields(array $payload): void {
+  protected function verifyRequiredFields(): void {
     try {
-      foreach ($payload as $field => $field_value) {
-        if (empty($field_value) && array_key_exists($field, $this->getRequiredProperties())) {
+      foreach ($this->getRequiredProperties() as $field => $field_value) {
+        if (empty($field_value)) {
           $error = ['msg' => 'The field "' . $field . '" is required.', 'class' => __CLASS__, 'func' => __METHOD__,];
           throw new RestException($error);
         }
@@ -184,15 +195,11 @@ class Daterange implements JsonSerializable {
 
   /**
    * Verifies the start and end dates.
-   *
-   * @param array $payload
    */
-  protected function verifyDates(array $payload): void {
+  protected function verifyDates(): void {
     try {
-      $start = new DateTime($payload['date_start']);
-      $end = new DateTime($payload['date_end']);
-      if ($start > $end) {
-        $error = ['msg' => 'The end date must be grater or equal to the start date. Start date: ' . $payload['date_start'] . '. End date: ' . $payload['date_end'], 'class' => __CLASS__, 'func' => __METHOD__,];
+      if ($this->date_start > $this->date_end) {
+        $error = ['msg' => 'The end date must be grater or equal to the start date. Start date: ' . $this->date_start->format(DATE_FORMAT) . '. End date: ' . $this->date_end->format(DATE_FORMAT) , 'class' => __CLASS__, 'func' => __METHOD__,];
         throw new RestException($error);
       }
     }
@@ -202,98 +209,37 @@ class Daterange implements JsonSerializable {
   }
 
   /**
-   * Updates current Daterange instance based on another Daterange instance.
-   *
-   * @param array $neighbors
-   *
-   * @return array
-   * @throws \Exception
+   * @param string $date_start
    */
-  public function update(array $neighbors): array {
-
-    $current_start = new DateTime($this->date_start);
-    $current_end = new DateTime($this->date_end);
-
-    $add = [];
-    $delete = [];
-
-    foreach ($neighbors as $date) {
-      $start = new DateTime($date->date_start);
-      $end = new DateTime($date->date_end);
-
-      // Merges
-      if (abs(($this->price - $date->price) / $date->price) < 0.00001) {
-
-        // start is before - end is after
-        if ($start < $current_start && $end > $current_end) {
-          break;
-        }
-
-        // start is before - end is at or before
-        elseif ($start < $current_start && $end <= $current_end) {
-          $delete[] = $date->date_start;
-          $this->date_start = $date->date_start;
-          $add[] = $this;
-        }
-
-        // start is at or after - ends at or before
-        elseif ($start >= $current_start && $end <= $current_end) {
-          $delete[] = $date->date_start;
-          $add[] = $this;
-        }
-
-        // start is at or after - ends is after
-        elseif ($start >= $current_start && $end > $current_end) {
-          $delete[] = $date->date_start;
-          $this->date_end = $date->date_end;
-          $add[] = $this;
-        }
-      }
-
-      // Splits
-      else {
-        // start is before - end is after
-        if ($start < $current_start && $end > $current_end) {
-          $delete[] = $date->date_start;
-          $new = new Daterange();
-          $new->date_start = date_format($end->modify('+1 day'), DATE_FORMAT);
-          $new->date_end = $date->date_end;
-          $new->price = $date->price;
-          $add[] = $new;
-          $date->date_end = date_format($current_start->modify('-1 day'), DATE_FORMAT);
-          $add[] = $date;
-          $add[] = $this;
-        }
-
-        // start is before - end is at or before
-        elseif ($start < $current_start && $end <= $current_end) {
-          $delete[] = $date->date_start;
-          $date->date_end = date_format($current_start->modify('-1 day'), DATE_FORMAT);
-          $add[] = $date;
-          $add[] = $this;
-        }
-
-        // start is at or after - ends at or before
-        elseif ($start >= $current_start && $end <= $current_end) {
-          $delete[] = $date->date_start;
-          $add[] = $this;
-        }
-
-        // start is at or after - ends is after
-        elseif ($start >= $current_start && $end > $current_end) {
-          $delete[] = $date->date_start;
-          $date->date_start = date_format($current_end->modify('+1 day'),DATE_FORMAT);
-          $add[] = $date;
-          $add[] = $this;
-        }
-      }
+  protected function setDateStartFromString(string $date_start): void {
+    try {
+      $this->date_start = new DateTime($date_start);
     }
+    catch (\Exception $exception) {
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
+      throw new RestException($error);
+    }
+  }
 
-    $neighbors = [];
-    $neighbors['delete'] = $delete;
-    $neighbors['add'] = $add;
 
-    return $neighbors;
+  /**
+   * @param string $date_end
+   */
+  protected function setDateEndFromString(string $date_end): void {
+    try {
+      $this->date_end = new DateTime($date_end);
+    }
+    catch (\Exception $exception) {
+      $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
+      throw new RestException($error);
+    }
+  }
+
+  /**
+   * @param string $price
+   */
+  protected function setPriceFromString(string $price): void {
+    $this->price = (float) $price;
   }
 
   /**
@@ -320,6 +266,8 @@ class Daterange implements JsonSerializable {
    * @return array|mixed
    */
   public function jsonSerialize() {
+    $this->date_start = $this->date_start->format(DATE_FORMAT);
+    $this->date_end = $this->date_end->format(DATE_FORMAT);
     return array_filter(get_object_vars($this));
   }
 
@@ -352,31 +300,31 @@ class Daterange implements JsonSerializable {
   }
 
   /**
-   * @return string
+   * @return DateTime
    */
-  public function getDateStart(): string {
+  public function getDateStart(): DateTime {
     return $this->date_start;
   }
 
   /**
-   * @param string $date_start
+   * @param DateTime $date_start
    */
-  public function setDateStart(string $date_start): void {
-    $this->date_start = $date_start;
+  public function setDateStart(DateTime $date_start): void {
+      $this->date_start = $date_start;
   }
 
   /**
-   * @return string
+   * @return DateTime
    */
-  public function getDateEnd(): string {
+  public function getDateEnd(): DateTime {
     return $this->date_end;
   }
 
   /**
-   * @param string $date_end
+   * @param DateTime $date_end
    */
-  public function setDateEnd(string $date_end): void {
-    $this->date_end = $date_end;
+  public function setDateEnd(DateTime $date_end): void {
+      $this->date_end = $date_end;
   }
 
   /**
@@ -390,7 +338,7 @@ class Daterange implements JsonSerializable {
    * @param float $price
    */
   public function setPrice(float $price): void {
-    $this->price = $price;
+      $this->price = $price;
   }
 
 }

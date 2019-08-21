@@ -15,7 +15,7 @@ define('PDO', 'pdo');
 define('PDO_PARAMS', 'pdo_params');
 define('SCHEMA', 'schema');
 define('DATES_TABLE', 'dates');
-define('DATES_VIEW', 'single_date');
+define('DATES_VIEW', 'range_dates');
 define('DATES_VIEW_ALL', 'all_dates');
 
 // Query constants.
@@ -47,6 +47,7 @@ define('DATE_STARTS', 'date_start');
 define('DATE_ENDS', 'date_end');
 define('PRICE', 'price');
 define('V1', 'v1');
+define('ALL', 'all');
 define('DATE_FORMAT', 'Y-m-d');
 define('RESOURCE_NAMESPACE', 'Daterange\v1\Resource\\');
 define('DATERANGE_CLASS', 'Daterange\v1\Model\Daterange');
