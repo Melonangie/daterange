@@ -160,7 +160,6 @@ class DaterangeMergingService {
         // Neighbor *meets or overlaps or finished-by* the new daterange.
         //     $daterange
         // -----+-----+-----
-        //  a--b|     |         $neighbor before
         //  a---b     |         $neighbor meets
         //  a-----b   |         $neighbor overlaps
         //  a---------b         $neighbor finished-by
@@ -205,9 +204,6 @@ class DaterangeMergingService {
     if ($include_daterange) {
       $this->new_segments[] = $this->daterange;
     }
-    var_dump($include_daterange);
-    var_dump($this->new_segments);
-//die();
 
   }
 

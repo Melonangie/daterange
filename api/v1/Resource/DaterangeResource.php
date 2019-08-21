@@ -150,7 +150,6 @@ Class DaterangeResource {
 
     // Gets the neighbors data.
     if (!$merge->getNeighbors()) {
-      var_dump($merge->getNeighbors());
       return $this->service->createDaterange($merge->getDaterange());
     }
 
@@ -158,7 +157,7 @@ Class DaterangeResource {
     $merge->updateNeighbors();
 
     // Recreate the records.
-    return $this->service->recreateDateranges($this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
+    return $this->service->recreateDateranges($this->getValues($merge->getNeighbors()), count($merge->getNeighbors()), $this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
   }
 
   /**
@@ -180,7 +179,7 @@ Class DaterangeResource {
     $merge->updateNeighbors();
 
     // Recreate the records.
-    return $this->service->recreateDateranges($this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
+    return $this->service->recreateDateranges($merge->getNeighbors(), count($merge->getNeighbors()), $this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
   }
 
   /**
@@ -216,9 +215,11 @@ Class DaterangeResource {
   private function getValues(array $segments): array {
     $values = [];
     foreach ($segments as $record) {
-      $values[] = $record->getDateStart()->format(DATE_FORMAT);
-      $values[] = $record->getDateEnd()->format(DATE_FORMAT);
-      $values[] = $record->getPrice();
+      if ($record !== NULL) {
+        $values[] = $record->getDateStart()->format(DATE_FORMAT);
+        $values[] = $record->getDateEnd()->format(DATE_FORMAT);
+        $values[] = $record->getPrice();
+      }
     }
     return $values;
   }

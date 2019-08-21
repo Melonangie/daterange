@@ -189,16 +189,23 @@ class DaterangeQueryService {
   /**
    * Recreate Date ranges records.
    *
+   * @param array $del
+   * @param int   $countdel
    * @param array $values
    *
    * @param int   $count
    *
    * @return array
    */
-  public function recreateDateranges(array $values, int $count): array {
+  public function recreateDateranges(array $del, int $countdel, array $values, int $count): array {
     try {
       // Begin transaction.
       $this->db->pdo()->beginTransaction();
+
+      // Recreates the records.
+      $place_holders = str_repeat('?,', $countdel - 1) . '?';
+      $query = $this->db->pdo()->prepare(sprintf('DELETE FROM `%s` WHERE `%s` IN (%s)', $this->db->get('TABLE'), DATE_STARTS, $place_holders));
+      $query->execute($del);
 
       // Recreates the records.
       $place_holders = str_repeat('(?,?,?),', $count - 1) . '(?,?,?)';
