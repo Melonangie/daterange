@@ -271,6 +271,10 @@ class Daterange implements JsonSerializable {
     return array_filter(get_object_vars($this));
   }
 
+  public function __toString() {
+    return $this->date_start->format(DATE_FORMAT);
+  }
+
   /**
    * @return int
    */
@@ -310,7 +314,8 @@ class Daterange implements JsonSerializable {
    * @param DateTime $date_start
    */
   public function setDateStart(DateTime $date_start): void {
-      $this->date_start = $date_start;
+    $date_start->settime(0,0);
+    $this->date_start = $date_start;
   }
 
   /**
@@ -324,7 +329,8 @@ class Daterange implements JsonSerializable {
    * @param DateTime $date_end
    */
   public function setDateEnd(DateTime $date_end): void {
-      $this->date_end = $date_end;
+    $date_end->settime(0,0);
+    $this->date_end = $date_end;
   }
 
   /**

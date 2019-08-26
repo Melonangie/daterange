@@ -49,6 +49,7 @@ define('PRICE', 'price');
 define('V1', 'v1');
 define('ALL', 'all');
 define('DATE_FORMAT', 'Y-m-d');
+define('DATE_NO_TIME_FORMAT', '!' . DATE_FORMAT);
 define('RESOURCE_NAMESPACE', 'Daterange\v1\Resource\\');
 define('DATERANGE_CLASS', 'Daterange\v1\Model\Daterange');
 

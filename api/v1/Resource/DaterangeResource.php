@@ -8,9 +8,6 @@ use Daterange\v1\Model\Daterange as Daterange;
 use Daterange\v1\Request\Request as Request;
 use Daterange\v1\Service\DaterangeMergingService as DaterangeMergingService;
 use Daterange\v1\Service\DaterangeQueryService as DaterangeQueryService;
-use Exception;
-use PDO;
-use PDOException;
 
 /**
  * Class DaterangeResource
@@ -40,7 +37,11 @@ Class DaterangeResource {
    */
   protected $service;
 
-
+  /**
+   * Daterange object..
+   *
+   * @var Daterange
+   */
   protected $daterange;
 
   /**
@@ -64,15 +65,6 @@ Class DaterangeResource {
   }
 
   /**
-   * Gets the request.
-   *
-   * @return Request
-   */
-  public function getRequest(): Request {
-    return $this->request;
-  }
-
-  /**
    * Select the Database driver.
    *
    * @return DBConnection
@@ -80,6 +72,15 @@ Class DaterangeResource {
   private function setDriver(): DBConnection {
     // Here goes the logic to select a store engine.
     return new DBConnection(MYSQL);
+  }
+
+  /**
+   * Gets the request.
+   *
+   * @return Request
+   */
+  public function getRequest(): Request {
+    return $this->request;
   }
 
   /**
@@ -115,7 +116,7 @@ Class DaterangeResource {
   }
 
   /**
-   * Maps the GET request method to a function in DaterangeService.
+   * Maps the GET request method to a function in DaterangeQueryService.
    *
    * @return array|string
    */
@@ -139,9 +140,11 @@ Class DaterangeResource {
   }
 
   /**
-   * Maps the POST request with the function createDaterange from DaterangeService.
+   * Maps the POST request with the function createDaterange from
+   * DaterangeQueryService.
    *
    * @return array
+   * @throws \Exception
    */
   public function post(): array {
 
@@ -153,17 +156,16 @@ Class DaterangeResource {
       return $this->service->createDaterange($merge->getDaterange());
     }
 
-    // Merges, splits neighbors data.
-    $merge->updateNeighbors();
-
     // Recreate the records.
-    return $this->service->recreateDateranges($this->getValues($merge->getNeighbors()), count($merge->getNeighbors()), $this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
+    return $this->service->updateDateranges($merge->getOldSegmentsValues(), count($merge->getOldSegments()), $merge->getUpsertSegmentsValues(), count($merge->getUpsertSegments()));
   }
 
   /**
-   * Maps the PUT method with the function updateDaterange from DaterangeService.
+   * Maps the PUT method with the function updateDaterange from
+   * DaterangeQueryService.
    *
    * @return array
+   * @throws \Exception
    */
   public function put(): array {
 
@@ -175,15 +177,13 @@ Class DaterangeResource {
       return $this->service->updateDaterange($merge->getDaterange());
     }
 
-    // Merges, splits neighbors data.
-    $merge->updateNeighbors();
-
     // Recreate the records.
-    return $this->service->recreateDateranges($merge->getNeighbors(), count($merge->getNeighbors()), $this->getValues($merge->getNewSegments()), count($merge->getNewSegments()));
+    return $this->service->updateDateranges($merge->getOldSegmentsValues(), count($merge->getOldSegments()), $merge->getUpsertSegmentsValues(), count($merge->getUpsertSegments()));
   }
 
   /**
-   * Maps the DELETE method with the function deleteDaterange from DaterangeService.
+   * Maps the DELETE method with the function deleteDaterange from
+   * DaterangeQueryService.
    *
    * @return array
    */
@@ -196,32 +196,13 @@ Class DaterangeResource {
     }
 
     // Delete all records.
-    if (strcasecmp($this->request->getParameter(), ALL) === 0 ) {
+    if (strcasecmp($this->request->getParameter(), ALL) === 0) {
       return $this->service->deleteDaterangeAll();
     }
 
     // Deletes a single record.
     return $this->service->deleteDaterange($this->request->getParameter());
 
-  }
-
-  /**
-   * Returns array of object values.
-   *
-   * @param array $segments
-   *
-   * @return array
-   */
-  private function getValues(array $segments): array {
-    $values = [];
-    foreach ($segments as $record) {
-      if ($record !== NULL) {
-        $values[] = $record->getDateStart()->format(DATE_FORMAT);
-        $values[] = $record->getDateEnd()->format(DATE_FORMAT);
-        $values[] = $record->getPrice();
-      }
-    }
-    return $values;
   }
 
 }

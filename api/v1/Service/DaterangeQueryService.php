@@ -190,28 +190,31 @@ class DaterangeQueryService {
    * Recreate Date ranges records.
    *
    * @param array $del
-   * @param int   $countdel
+   * @param int   $count_del
    * @param array $values
-   *
-   * @param int   $count
+   * @param int   $count_values
    *
    * @return array
    */
-  public function recreateDateranges(array $del, int $countdel, array $values, int $count): array {
+  public function updateDateranges(array $del, int $count_del, array $values, int $count_values): array {
     try {
       // Begin transaction.
       $this->db->pdo()->beginTransaction();
 
       // Recreates the records.
-      $place_holders = str_repeat('?,', $countdel - 1) . '?';
-      $query = $this->db->pdo()->prepare(sprintf('DELETE FROM `%s` WHERE `%s` IN (%s)', $this->db->get('TABLE'), DATE_STARTS, $place_holders));
-      $query->execute($del);
+      if ($count_del) {
+        $place_holders = str_repeat('?,', $count_del - 1) . '?';
+        $query = $this->db->pdo()->prepare(sprintf('DELETE FROM `%s` WHERE `%s` IN (%s)', $this->db->get('TABLE'), DATE_STARTS, $place_holders));
+        $query->execute($del);
+      }
 
       // Recreates the records.
-      $place_holders = str_repeat('(?,?,?),', $count - 1) . '(?,?,?)';
-      $sql ='INSERT INTO `%s` (`%s`, `%s`, `%s`) VALUES %s ON DUPLICATE KEY UPDATE `%s`=VALUES(`%s`), `%s`=VALUES(`%s`), `%s`=VALUES(`%s`)';
-      $query = $this->db->pdo()->prepare(sprintf($sql, $this->db->get('TABLE'), DATE_STARTS, DATE_ENDS, PRICE, $place_holders, DATE_STARTS, DATE_STARTS, DATE_ENDS, DATE_ENDS, PRICE, PRICE));
-      $query->execute($values);
+      if ($count_values) {
+        $place_holders = str_repeat('(?,?,?),', $count_values - 1) . '(?,?,?)';
+        $sql ='INSERT INTO `%s` (`%s`, `%s`, `%s`) VALUES %s ON DUPLICATE KEY UPDATE `%s`=VALUES(`%s`), `%s`=VALUES(`%s`), `%s`=VALUES(`%s`)';
+        $query = $this->db->pdo()->prepare(sprintf($sql, $this->db->get('TABLE'), DATE_STARTS, DATE_ENDS, PRICE, $place_holders, DATE_STARTS, DATE_STARTS, DATE_ENDS, DATE_ENDS, PRICE, PRICE));
+        $query->execute($values);
+      }
 
       // Commits transaction.
       $this->db->pdo()->commit();
@@ -223,7 +226,7 @@ class DaterangeQueryService {
     }
 
     // Return response.
-    return ['Code:' => '200', 'Message:' => 'Successfully created new record.', 'Error:' => ''];
+    return ['Code:' => '200', 'Message:' => 'Successfully updated records.', 'Error:' => ''];
   }
 
   /**
@@ -325,6 +328,8 @@ class DaterangeQueryService {
    *
    * @param string $date_start
    * @param string $date_end
+   *
+   * @param float  $price
    *
    * @return array
    */
