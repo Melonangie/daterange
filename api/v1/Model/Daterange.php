@@ -214,6 +214,7 @@ class Daterange implements JsonSerializable {
   protected function setDateStartFromString(string $date_start): void {
     try {
       $this->date_start = new DateTime($date_start);
+      $this->date_start->settime(0,0);
     }
     catch (\Exception $exception) {
       $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
@@ -228,6 +229,7 @@ class Daterange implements JsonSerializable {
   protected function setDateEndFromString(string $date_end): void {
     try {
       $this->date_end = new DateTime($date_end);
+      $this->date_end->settime(0,0);
     }
     catch (\Exception $exception) {
       $error = ['err_msg' => $exception->getMessage(), 'err_code' => $exception->getCode(), 'msg' => 'Daterange service error.', 'class' => __CLASS__, 'func' => __METHOD__,];
@@ -307,7 +309,7 @@ class Daterange implements JsonSerializable {
    * @return DateTime
    */
   public function getDateStart(): DateTime {
-    return $this->date_start;
+    return $this->date_start->settime(0,0);
   }
 
   /**
@@ -322,7 +324,7 @@ class Daterange implements JsonSerializable {
    * @return DateTime
    */
   public function getDateEnd(): DateTime {
-    return $this->date_end;
+    return $this->date_end->settime(0,0);
   }
 
   /**

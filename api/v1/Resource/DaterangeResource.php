@@ -155,9 +155,9 @@ Class DaterangeResource {
     if (!$merge->getNeighbors()) {
       return $this->service->createDaterange($merge->getDaterange());
     }
-
+    var_dump($merge->getNeighbors());
     // Recreate the records.
-    return $this->service->updateDateranges($merge->getOldSegmentsValues(), count($merge->getOldSegments()), $merge->getUpsertSegmentsValues(), count($merge->getUpsertSegments()));
+    return $this->service->updateDateranges($merge->getOldSegmentsValues(), count($merge->getOldSegments()), $merge->getNeighborsValues(), count($merge->getNeighbors()));
   }
 
   /**
