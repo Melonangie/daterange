@@ -127,12 +127,9 @@ class DaterangeMergingService {
    */
   public function getOldSegmentsValues(): array {
     $values = [];
-    $this->old_segments = array_filter($this->old_segments);
-    if ($this->old_segments) {
+    if (count($this->old_segments)) {
       foreach ($this->old_segments as $record) {
         $values[] = $record->getDateStart()->format(DATE_FORMAT);
-        $values[] = $record->getDateEnd()->format(DATE_FORMAT);
-        $values[] = $record->getPrice();
       }
     }
     return $values;
@@ -165,31 +162,26 @@ class DaterangeMergingService {
    */
   protected function updateNeighbors() {
 
-    // Unique values.
-    //$this->neighbors = array_unique($this->neighbors, SORT_REGULAR);
-
     // Sorts the array.
     usort($this->neighbors, [$this, 'compare']);
 
     foreach ($this->neighbors as $i => $neighbor) {
-//      if($i == 1) {
-//        var_dump($this->neighbors);
-//      }
+
       // Compares equal floats (abs(($a-$b)/$b) < 0.00001)
-      if (abs(($this->daterange->getPrice() - $neighbor->getPrice()) / $neighbor->getPrice()) < 0.00001) {
+      if (abs($neighbor->getPrice() - $this->daterange->getPrice()) < PHP_FLOAT_EPSILON ) {
 
         // Merges.
         switch (TRUE) {
 
+          // daterange:             -----+-------+-----
+          // neighbor before:            |       |   [---]
+          // neighbor after:     [---]   |       |
           case $this->before($neighbor):
           case $this->after($neighbor):
-            // daterange:             -----+-------+-----
-            // neighbor before:            |       |  [---]
-            // neighbor after:     [---]   |       |
             // Neighbors.
-            $this->neighbors[] = clone $this->daterange;
-            // Deletes, adds.
-            $this->upsert_segments[] = clone $this->neighbors[$i];
+            $this->addDaterangeToNeighbors();
+            // Adds.
+            $this->addDaterangeToUpsert();
             break;
 
           // daterange:             -----+-------+-----
@@ -199,29 +191,27 @@ class DaterangeMergingService {
           case $this->meets($neighbor):
           case $this->overlaps($neighbor):
           case $this->finishedBy($neighbor):
+            // Deletes..
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $this->neighbors[$i]->setDateStart(clone $this->daterange->getDateStart());
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
+            $this->neighbors[] = clone $this->neighbors[$i];
+            // Adds.
             $this->upsert_segments[] = clone $this->neighbors[$i];
-//          if($i == 0) {
-//            var_dump("1");
-//            var_dump($this->upsert_segments);die();
-//          }
             break;
 
           // daterange:             -----+-------+-----
           // neighbor contains:          | [---] |
           case $this->contains($neighbor):
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $this->neighbors[$i] = clone $this->daterange;
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
-            $this->upsert_segments[] = clone $this->neighbors[$i];
-//            if($i == 0) {
-//              var_dump("2");
-//              var_dump($this->upsert_segments);die();
-//            }
+            $this->neighbors[] = clone $this->daterange;
+            // Adds.
+            $this->addDaterangeToUpsert();
             break;
 
           // daterange:             -----+-------+-----
@@ -233,10 +223,6 @@ class DaterangeMergingService {
           case $this->equals($neighbor):
           case $this->during($neighbor):
           case $this->finishes($neighbor):
-//          if($i == 0) {
-//            var_dump("3");
-//            var_dump($this->upsert_segments); die();
-//          }
             break;
 
           // daterange:             -----+-------+-----
@@ -246,14 +232,14 @@ class DaterangeMergingService {
           case $this->startedBy($neighbor):
           case $this->overlappedBy($neighbor):
           case $this->metBy($neighbor):
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $this->neighbors[$i]->setDateEnd(clone $this->daterange->getDateEnd());
-            // Deletes, adds.
+            $this->neighbors[] = clone $this->neighbors[$i];
+            // Adds.
             $this->upsert_segments[] = clone $this->neighbors[$i];
-//          if($i == 0) {
-//            var_dump("4");
-//            var_dump($this->upsert_segments);
-//          }
             break;
 
         }
@@ -264,15 +250,15 @@ class DaterangeMergingService {
         // Splits.
         switch (TRUE) {
 
+          // daterange:             -----+-------+-----
+          // neighbor before:            |       |   [---]
+          // neighbor after:     [---]   |       |
           case $this->before($neighbor):
           case $this->after($neighbor):
-            // daterange:             -----+-------+-----
-            // neighbor before:            |       |  [---]
-            // neighbor after:     [---]   |       |
             // Neighbors.
-            $this->neighbors[] = clone $this->daterange;
-            // Deletes, adds.
-            $this->upsert_segments[] = clone $this->neighbors[$i];
+            $this->addDaterangeToNeighbors();
+            // Adds.
+            $this->addDaterangeToUpsert();
             break;
 
           // daterange:             -----+-------+-----
@@ -280,22 +266,17 @@ class DaterangeMergingService {
           // neighbor starts:            [-------+--]
           case $this->overlaps($neighbor):
           case $this->starts($neighbor):
-          if($i == 1) {
-            var_dump("5");
-            var_dump($this->neighbors);
-          }
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
-            //$this->neighbors[] = clone $this->daterange;
+            $this->addDaterangeToNeighbors();
             $end = clone $this->daterange->getDateEnd();
             $this->neighbors[$i]->setDateStart($end->modify('+1 day'));
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
+            $this->neighbors[] = clone $this->neighbors[$i];
+            // Adds.
             $this->addDaterangeToUpsert();
             $this->upsert_segments[] = clone $this->neighbors[$i];
-            if($i == 1) {
-            var_dump("5");
-            var_dump($this->neighbors);
-          }
             break;
 
           // daterange:             -----+-------+-----
@@ -305,46 +286,40 @@ class DaterangeMergingService {
           case $this->finishedBy($neighbor):
           case $this->contains($neighbor):
           case $this->startedBy($neighbor):
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $this->neighbors[$i] = clone $this->daterange;
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
+            $this->neighbors[] = clone $this->daterange;
+            // Adds.
             $this->addDaterangeToUpsert();
-          if($i == 1) {
-            var_dump("6");
-            var_dump($this->upsert_segments);
-          }
             break;
 
           // daterange:             -----+-------+-----
           // neighbor equals:            [-------]
           case $this->equals($neighbor):
-            if($i == 1) {
-              var_dump("7");
-              var_dump($this->upsert_segments);
-            }
             break;
 
           // daterange:             -----+-------+-----
           // neighbor during:         [--+-------+--]
           case $this->during($neighbor):
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $segment_left = clone $neighbor;
             $start = clone $this->daterange->getDateStart();
             $segment_left->setDateEnd($start->modify('-1 day'));
             $this->neighbors[] = $segment_left;
-            $this->neighbors[] = clone $this->daterange;
+            $this->addDaterangeToNeighbors();
             $end = clone $this->daterange->getDateEnd();
             $this->neighbors[$i]->setDateStart($end->modify('+1 day'));
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
-            $this->upsert_segments[] = $segment_left;
+            $this->neighbors[] = clone $this->neighbors[$i];
+            // Adds.
+            $this->upsert_segments[] = clone $segment_left;
             $this->addDaterangeToUpsert();
             $this->upsert_segments[] = clone $this->neighbors[$i];
-            if($i == 1) {
-              var_dump("8");
-              var_dump($this->neighbors);
-            }
             break;
 
           // daterange:             -----+-------+-----
@@ -352,31 +327,27 @@ class DaterangeMergingService {
           // neighbor overlappedBy:  [---+----]  |
           case $this->finishes($neighbor):
           case $this->overlappedBy($neighbor):
+            // Deletes.
+            $this->old_segments[] = clone $neighbor;
+            $this->removeUpsert($neighbor->getDateStart());
             // Neighbors.
             $start = clone $this->daterange->getDateStart();
             $this->neighbors[$i]->setDateEnd($start->modify('-1 day'));
-            $this->neighbors[] = clone $this->daterange;
-            // Deletes, adds.
-            $this->old_segments[] = clone $neighbor;
+            $this->neighbors[] = clone $this->neighbors[$i];
+            $this->addDaterangeToNeighbors();
+            // Adds.
             $this->upsert_segments[] = clone $this->neighbors[$i];
             $this->addDaterangeToUpsert();
-          if($i == 1) {
-            var_dump("9");
-            var_dump($this->upsert_segments);
-          }
             break;
 
         }
 
       }
 
-      if($i == 0) {
-        //var_dump($this->upsert_segments);die();
-      }
-
     }
-    //$this->checkDatesRepeatConsecutive();
-   // var_dump($this->neighbors);die();
+
+    $this->checkDatesRepeatConsecutive();
+
   }
 
   /**
@@ -399,8 +370,7 @@ class DaterangeMergingService {
     $included = FALSE;
 
     foreach ($this->upsert_segments as $segment) {
-      if ($segment->getDateStart() == $this->daterange->getDateStart() &&
-        $segment->getDateEnd() == $this->daterange->getDateEnd()) {
+      if ($segment->getDateStart() == $this->daterange->getDateStart()) {
         $included = TRUE;
         break;
       }
@@ -412,30 +382,117 @@ class DaterangeMergingService {
 
   }
 
+  /**
+   * If not already added, adds the daterange to the upsert_segments array.
+   */
+  protected function addDaterangeToNeighbors(): void {
+
+    $included = FALSE;
+
+    foreach ($this->neighbors as $segment) {
+      if ($segment->getDateStart() == $this->daterange->getDateStart()) {
+        $included = TRUE;
+        break;
+      }
+    }
+
+    if (!$included) {
+      $this->neighbors[] = clone $this->daterange;
+    }
+
+  }
+
+  /**
+   * If not already added, adds the daterange to the upsert_segments array.
+   */
+  protected function removeUpsert(DateTime $start): void {
+
+    foreach ($this->upsert_segments as $i => $segment) {
+      if ($segment->getDateStart() == $start) {
+        unset($this->upsert_segments[$i]);
+        break;
+      }
+    }
+
+  }
 
   /**
    * Recursive function to merge dates.
    */
   protected function checkDatesRepeatConsecutive() {
 
-    if (count($this->upsert_segments) > 2) {
+    if (count($this->upsert_segments) > 1) {
 
-      $start = $end = NULL;
+      $this->upsert_segments = array_values($this->upsert_segments );
 
-      foreach ($this->upsert_segments as $i => $segment) {
+      foreach ($this->upsert_segments as $i => &$segment) {
 
         if ($i === 0) {
-          $start = clone $segment->getDateStart();
-          $end = clone $segment->getDateEnd();
           continue;
         }
 
-        if (($segment->getDateStart() >= $start) && ($segment->getDateEnd() <= $end)) {
-          return $this->updateNeighbors();
+        $this->daterange = $segment;
+
+        $j = $i - 1;
+
+        if ( ! isset($this->upsert_segments[$j])) {
+          break;
         }
 
-        $start = clone $segment->getDateStart();
-        $end = clone $segment->getDateEnd();
+        $neighbor = $this->upsert_segments[$j];
+
+        // Compares equal floats (abs(($a-$b)/$b) < 0.00001)
+        if (abs($segment->getPrice() - $neighbor->getPrice()) < PHP_FLOAT_EPSILON ) {
+
+          // Merges.
+          switch (TRUE) {
+
+            // daterange:             -----+-------+-----
+            // neighbor meets:             |       |[---]
+            // neighbor overlaps:          |    [--+--]
+            // neighbor finished-by:       |  [----]
+            case $this->meets($neighbor):
+            case $this->overlaps($neighbor):
+            case $this->finishedBy($neighbor):
+              $this->upsert_segments[$i]->setDateEnd(clone $this->upsert_segments[$j]->setDateEnd());
+              $this->old_segments[] = clone $this->upsert_segments[$j];
+              unset($this->upsert_segments[$j]);
+              break;
+
+            // daterange:             -----+-------+-----
+            // neighbor contains:          | [---] |
+            case $this->contains($neighbor):
+              $this->old_segments[] = clone $this->upsert_segments[$j];
+              unset($this->upsert_segments[$j]);
+              break;
+
+            // daterange:             -----+-------+-----
+            // neighbor starts:            [-------+--]
+            // neighbor equals:            [-------]
+            // neighbor during:         [--+-------+--]
+            // neighbor finishes:       [--+-------]
+            case $this->starts($neighbor):
+            case $this->equals($neighbor):
+            case $this->during($neighbor):
+            case $this->finishes($neighbor):
+              $this->old_segments[] = clone $this->upsert_segments[$i];
+              unset($this->upsert_segments[$i]);
+              break;
+
+            // daterange:             -----+-------+-----
+            // neighbor startedBy:         [-----] |
+            // neighbor overlappedBy:   [--+---]   |
+            // neighbor metBy:        [---]|       |
+            case $this->startedBy($neighbor):
+            case $this->overlappedBy($neighbor):
+            case $this->metBy($neighbor):
+              $this->upsert_segments[$i]->setDateStart(clone $this->upsert_segments[$j]->getDateStart());
+              $this->old_segments[] = clone $this->upsert_segments[$j];
+              unset($this->upsert_segments[$j]);
+              break;
+
+          }
+        }
       }
     }
 
@@ -480,10 +537,10 @@ class DaterangeMergingService {
 
   /**
    * Daterange *overlaps* the neighbor.
-   *             ds          de
-   * daterange:  [-----+-----]-----+
-   * neighbor:   +-----[-----+-----]
-   *                   ns          ne
+   *             ds          de         ds   de        dsde
+   * daterange:  [-----+-----]-----+    [----]----+    -I----+
+   * neighbor:   +-----[-----+-----]    -----[----]    -[----]
+   *                   ns          ne        ns   ne    ns   ne
    *
    * @param \Daterange\v1\Model\Daterange $neighbor
    *
@@ -492,10 +549,10 @@ class DaterangeMergingService {
   protected function overlaps(Daterange $neighbor): bool {
 
     return
-      // Starts:  ds < ns
-      $this->daterange->getDateStart() < $neighbor->getDateStart() &&
-      // Overlap: ns < de
-      $neighbor->getDateStart() < $this->daterange->getDateEnd() &&
+      // Starts:  ds <= ns
+      $this->daterange->getDateStart() <= $neighbor->getDateStart() &&
+      // Overlap: ns <= de
+      $neighbor->getDateStart() <= $this->daterange->getDateEnd() &&
       // Ends:    de < ne
       $this->daterange->getDateEnd() < $neighbor->getDateEnd();
   }
@@ -645,10 +702,10 @@ class DaterangeMergingService {
 
   /**
    * Daterange *overlapped-by* the neighbor.
-   *                   ds          de
-   * daterange:  +-----[-----+-----]
-   * neighbor:   [-----+-----]-----+
-   *             ns          ne
+   *                   ds          de        ds   de       dsde
+   * daterange:  +-----[-----+-----]    +----[----]    -+---I-
+   * neighbor:   [-----+-----]-----+    [----]----+    -[---]-
+   *             ns          ne         ns   ne         ns  ne
    *
    * @param \Daterange\v1\Model\Daterange $neighbor
    *
@@ -659,10 +716,10 @@ class DaterangeMergingService {
     return
       // Starts:  ns < ds
       $neighbor->getDateStart() < $this->daterange->getDateStart() &&
-      // Overlap: ds < ne
-      $this->daterange->getDateStart() < $neighbor->getDateEnd() &&
+      // Overlap: ds <= ne
+      $this->daterange->getDateStart() <= $neighbor->getDateEnd() &&
       // Ends:    ne < de
-      $neighbor->getDateEnd() < $this->daterange->getDateEnd();
+      $neighbor->getDateEnd() <= $this->daterange->getDateEnd();
   }
 
   /**
