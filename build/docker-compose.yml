@@ -1,0 +1,100 @@
+version: '3.6'
+
+services:
+  http:
+    image: ${WEB_VERSION}
+    container_name: http
+    depends_on:
+      - php
+      - web
+    ports:
+      - "80:80"
+    volumes:
+      - ${API_ROOT}:/api
+      - ${WEB_ROOT}:/app-web
+      - ./http/conf.d:/etc/nginx/conf.d
+    networks:
+      - backend
+      - frontend
+
+  web:
+    build:
+      context: ../
+      dockerfile: ./build/web/Dockerfile
+    container_name: web
+    #    command: npm run prod
+    ports:
+          - "8080:80"
+    volumes:
+      - ${WEB_ROOT}:/app-web
+    networks:
+      - frontend
+
+  php:
+    build:
+      context: .
+      dockerfile: ./php/Dockerfile
+    container_name: php
+    depends_on:
+      - mysql
+      - redis
+    expose:
+      - 9000
+    environment:
+      - DB_MYSQL_HOST=${MYSQL_HOST}
+      - DB_MYSQL_NAME=${MYSQL_DATABASE}
+      - DB_MYSQL_USER=${MYSQL_USER}
+      - DB_MYSQL_PASSWORD_FILE=${MYSQL_PASSWORD_FILE}
+      - DB_MYSQL_CHARSET=${MYSQL_CHARSET}
+      - DB_MYSQL_COLLATE=${MYSQL_COLLATE}
+      - CHARSET=${CHARSET}
+    volumes:
+      - ${API_ROOT}:/api
+    secrets:
+      - db_mysql_password
+    networks:
+      - backend
+      - frontend
+
+  mysql:
+    image: ${MYSQL_VERSION}
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=${MYSQL_ROOT_PASSWORD_FILE}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD_FILE=${MYSQL_PASSWORD_FILE}
+      - TZ=${TZ}
+    secrets:
+      - db_mysql_password
+      - db_mysql_root_password
+    volumes:
+      - ./mysql/db_mysql_data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      - ./mysql/dump-dateranges.sql:/docker-entrypoint-initdb.d/dump-dateranges.sql
+    networks:
+      - backend
+
+  redis:
+    image: ${REDIS_VERSION}
+    container_name: redis
+    #command: sh -c "sudo echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+secrets:
+  db_mysql_password:
+    file: ../db_mysql_password
+  db_mysql_root_password:
+    file: ../db_mysql_root_password
+
+volumes:
+  db_mysql_data:
+
+networks:
+  backend:
+  frontend:

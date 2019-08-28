@@ -40,7 +40,6 @@ lerna-debug.log*
 
 # Build generated
 **/dist/
-**/build/
 **/doc/
 **/node/
 **/target/

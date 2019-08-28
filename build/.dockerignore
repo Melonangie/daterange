@@ -1,0 +1,9 @@
+.git
+.idea
+dist
+node_modules
+project/docs
+project/tmp
+public/assets
+public/reports
+npm-debug.log
