@@ -39,7 +39,6 @@ lerna-debug.log*
 .eslintcache
 
 # Build generated
-**/dist/
 **/doc/
 **/node/
 **/target/
@@ -55,7 +54,6 @@ lerna-debug.log*
 # Project
 **/config/local*
 debug.log
-**/dist
 **/project/tmp
 **/public/assets
 **/public/proto
